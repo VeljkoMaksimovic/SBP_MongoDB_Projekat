@@ -1,0 +1,287 @@
+1.Za svaku poziciju odrediti 10 najboljih igraca na nivou citave sezone
+db['2016-17'].aggregate(
+	[{$group : {
+			"_id" : "$name",
+			"position" : {"$first" : "$position"},
+			"total_points" : {"$sum" : "$total_points"}
+		}},
+	{$sort : {'position' : 1, total_points: -1}},
+	{$group : {
+			"_id" : "$position",
+			"players" : {"$push" : {"player" : "$_id" , "points" : "$total_points"}}
+		}},
+	{$project : {
+			"_id" : 0,
+			"position" : "$_id",
+			"players" : {"$slice" : ["$players", 10]}
+		}}
+	]
+).pretty()
+
+2.Nadogradnja na prethodnu agregaciju. Za tih 10 najboljih igraca, treba za svako kolo da vidimo cenu i izracunamo koliko poena donose po milionu ulozenom u njih. Na kraju treba ispisati za svaku od 4 pozicije koliko donosi poena po jedinici cene. (Samo cu ispisati poene, necu navoditi spisak igraca, posto je to uradjeno u prethodnoj agregaciji)
+db['2016-17'].aggregate(
+	[
+	{$group : {
+			"_id" : "$name",
+			"position" : {"$first" : "$position"},
+			"total_points" : {"$sum" : "$total_points"},
+			"total_value" : {"$sum" : "$value"}
+		}},
+	{$sort : {'position' : 1, total_points: -1}},
+	{$group : {
+			"_id" : "$position",
+			"players" : {"$push" : {"player" : "$_id" , "points_per_mill" : {"$multiply" : [{"$divide" : ["$total_points", "$total_value"]},10]}}}
+		}},
+	{$project : {
+			"_id" : 0,
+			"position" : "$_id",
+			"players" : {"$slice" : ["$players", 10]}
+		}},
+	{$unwind : "$players"},
+	{"$group" : {
+			"_id" : "$position",
+			"average_points_per_mill" : {"$avg" : "$players.points_per_mill"}
+		}}
+	]
+).pretty()
+
+3. Za svako kolo odrediti najbolju postavu (4-4-2) po pretpostavci igraca. Izabrati fudbalere koji su za to kolo bili selektovani od strane najvise igraca
+db['2017-18'].aggregate(
+	[
+	{$sort : {gw : 1, 'selected' : -1}},
+	{$group : {
+			"_id" : {"gw" : "$gw",
+				"position" : "$position"
+				},
+			"players" : {"$push" : "$name"}
+		}},
+	{$project : {
+			"_id" : 0,
+			"gw" : "$_id.gw",
+			"position" : "$_id.position",
+			"players" : {"$slice" : ["$players", 
+			{
+				"$cond" : [{"$lte" : ["$_id.position",1]}, 1,
+				{
+					"$cond" : [{"$gte" : ["$_id.position",4]}, 2, 4]
+				}]
+			}]}
+		}},
+	{$group : {
+			"_id" : "$gw",
+			"squad" : {"$push" : {"position" : "$position", "players" : "$players"}}
+		}},
+	{$project : {"_id" : 0, "gw" : "$_id", "squad" : "$squad"}},
+	{$sort : {gw : 1}}
+	]
+).pretty()
+
+4.1 Za svako kolo prosek poena domacih i gostujucih igraca 
+db['2016-17'].aggregate(
+	[
+	{$match : {'minutes' : 90}},
+	{$group : {
+			"_id": {
+				"gw_no": "$gw",
+				"was_home": "$was_home"
+			},
+			"average_points" : {"$avg" : "$total_points"}
+		}},
+	{$sort: {'_id.gw_no' : 1, '_id.was_home' : -1}}
+	]
+).pretty()
+
+4.2 Broj prosecnih poena po kolu domacih i gostujucih igraca na nivou sezone
+db['2016-17'].aggregate(
+	[
+	{$match : {'minutes' : 90}},
+	{$group : {
+			"_id": {
+				"gw_no": "$gw",
+				"was_home": "$was_home"
+			},
+			"average_points" : {"$avg" : "$total_points"}
+		}},
+	{$group : {
+			"_id" : "$_id.was_home",
+			"average_points" : {"$avg" : "$average_points"}
+		}}
+	]
+).pretty()
+
+5. U kom kolu je prosecna cena igraca najveca? U obzir uzimamo 400 najskupljih igraca svakog kola. Interesuje nas da li prosecna cena igraca raste kako sezona odmice (obratiti paznju na kola sa manje ili vise utakmica)
+db['2017-18'].aggregate(
+	[
+	{$sort : {gw : 1,'value' : -1}},
+	{$group : {
+			"_id" : "$gw",
+			"players" : {$push : "$$ROOT"}
+		}},
+	{$project : { "players" : { $slice : ["$players", 100]}}},
+	{$unwind : "$players"},
+	{$group : {
+			"_id" : "$_id",
+			"average_value" : {"$avg" : "$players.value"}
+		}},
+	{$project : {"_id" : 0, "gw" : "$_id", "average_value" : "$average_value"}},
+	{$sort : {gw : 1}}
+	]
+).pretty()
+
+6.Koliko cestro se desi da najbolja postava kola (4-4-2) i po jedna izmena za svaku poziciju bude ukupno vredna manje od 100 miliona, koliko svaki igrac ima na raspoladanju da sastavi svoj tim?
+db['2016-17'].aggregate(
+	[{$sort : {gw : 1, 'total_points' : -1}},
+	{$group : {
+			"_id" : {"gw" : "$gw",
+				"position" : "$position"
+				},
+			"players" : {"$push" : 
+					{
+					"name" : "$name" , 
+					"total_points" : "$total_points",
+					"value" : "$value"
+					}
+				}
+		}},
+	{$project : {
+			"_id" : 0,
+			"gw" : "$_id.gw",
+			"position" : "$_id.position",
+			"players" : {"$slice" : ["$players", 
+			{
+				"$cond" : [{"$lte" : ["$_id.position",1]}, 2,
+				{
+					"$cond" : [{"$gte" : ["$_id.position",4]}, 3, 5]
+				}]
+			}]}
+		}},
+	{$unwind : "$players"},
+	{$group : {
+			"_id" : "$gw",
+			"total_points" : {"$sum" : "$players.total_points"},
+			"total_price" : {"$sum" : "$players.value"}
+		}},
+	{$match : {total_price : {"$lte" : 1000}}},
+	{$group : {
+			"_id" : null,
+			"count" : {"$sum" : 1}
+		}},
+	{$project : {"_id" : 0, "Number of 'dream teams' worth less then 100m" : "$count"}}
+	]
+).pretty()
+
+7. Koliko se u proseku pokaze crvenih, a koliko zutih kartona po kolu?
+db['2018-19'].aggregate(
+	[{$group : {
+			"_id" : "$gw",
+			"yellow_cards" : {"$sum" : "$yellow_cards"},
+			"red_cards" : {"$sum" : "$red_cards"}
+		}},
+	{$group : {
+			"_id" : null,
+			"yellow_cards" : {"$avg" : "$yellow_cards"},
+			"red_cards" : {"$avg" : "$red_cards"}
+		}},
+	{$project : {
+			"_id" : 0,
+			"avg no of yellow cards" : {"$round" : ["$yellow_cards",3]},
+			"avg no of red cards" : {"$round" : ["$red_cards",3]}
+	}}
+	]
+)
+
+8. Koliko golova u proseku postize najskuplji napadac po mecu. (Za svako kolo pogledati ko je najskuplji napadac i koliko je golova postigao)
+db['2016-17'].aggregate(
+	[
+	{$match : {'position' : 4}},
+	{$sort : {gw : 1, 'value' : -1}},
+	{$group : {
+			"_id" : "$gw",
+			"player_name" : {"$first" : "$name"},
+			"goals" : {"$first" : "$goals_scored"}
+		}},
+	{$group : {
+			"_id" : null,
+			"goals" : {"$avg" : "$goals"}
+		}},
+	{$project : {"_id" : 0, "avg goals per game" : {"$round" : ["$goals", 3]}}}
+	]
+).pretty()
+
+9. Koliko cesto se desava da golman primi gol na utakmici, a i dalje bude najbolji golman u kolu)
+db['2017-18'].aggregate(
+	[
+	{$match : {'position' : 1}},
+	{$sort : {gw : 1, 'total_points' : -1}},
+	{$group : {
+			"_id" : "$gw",
+			"player_name" : {"$first" : "$name"},
+			"points" : {"$first" : "$total_points"},
+			"goals_conceded" : {"$first" : "$goals_conceded"}
+		}},
+	{$match : {'goals_conceded' : {"$gt" : 0}}},
+	{$group : {
+			"_id" : null,
+			"count" : {"$sum" : 1},
+			"players" : {"$push" : "$player_name"}
+		}},
+	{$project : {
+			"_id" : 0,
+			"No of best goalkeepers withouth a clean sheet" : "$count",
+			"Names of those goalkeepers" : "$players"
+		}}
+	]
+).pretty()
+
+10. Koliko cesto se desava da igrac ne promeni svoju cenu 5 nedelja (kola) u nizu?
+Prva verzija(Samo vraca igrace sa nizom cena iz kola u kolo)
+db['2018-19'].aggregate(
+	[
+	{$group : {
+			"_id" : "$name",
+			"values" : {"$push" : "$value"},
+			"avg_minutes" : {"$avg" : "$minutes"}
+		}},
+	//Racunamo standardnu devijaciju za svakih 5 uzastopnih vrednosti (ako je stdDev 0, znaci da se cena nije menjala tih 5 kola)
+	{$project : {"stdDev" : {$map : {
+			input : {$range : [0,{$subtract:[{$size : "$values"},4]}]},
+			in : {$stdDevPop : {$slice : ["$values", "$$this", 5]}}
+				}},
+			"avg_minutes" : 1
+		}},
+	//ostavljamo samo igrace kod kojih postoji stdDev 0, tacnije ima 5 nedelja bez promene cene
+	{$match : {stdDev : {$in : [0]}}},
+	//prebrojavamo koliko ima takvih igraca
+	{$group : {
+			"_id" : null,
+			"Broj igraca koji su imali period od 5 nedelja bez promene cene" : {"$sum" : 1},
+			"Prosecna minutaza takvih igraca" : {"$avg" : "$avg_minutes"}
+		}}
+	]
+).pretty()
+
+10.1 Radi poredjenja, da vidimo koliko ima igraca kojima cena toliko varira da nemaju 5 utakmica sa istom cenom, i koliko oni igraju u proseku
+db['2018-19'].aggregate(
+	[
+	{$group : {
+			"_id" : "$name",
+			"values" : {"$push" : "$value"},
+			"avg_minutes" : {"$avg" : "$minutes"}
+		}},
+	//Racunamo standardnu devijaciju za svakih 5 uzastopnih vrednosti (ako je stdDev 0, znaci da se cena nije menjala tih 5 kola)
+	{$project : {"stdDev" : {$map : {
+			input : {$range : [0,{$subtract:[{$size : "$values"},4]}]},
+			in : {$stdDevPop : {$slice : ["$values", "$$this", 5]}}
+				}},
+			"avg_minutes" : 1
+		}},
+	//ostavljamo samo igrace kod kojih postoji stdDev 0, tacnije ima 5 nedelja bez promene cene
+	{$match : {stdDev : {$nin : [0]}}},
+	//prebrojavamo koliko ima takvih igraca
+	{$group : {
+			"_id" : null,
+			"Broj igraca koji nisu imali period od 5 nedelja bez promene cene" : {"$sum" : 1},
+			"Prosecna minutaza takvih igraca" : {"$avg" : "$avg_minutes"}
+		}}
+	]
+).pretty()
