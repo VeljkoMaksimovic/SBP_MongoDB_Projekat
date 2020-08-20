@@ -12,3 +12,4 @@ U sklopu projekta je napravljeno vise razlicitih baza sa drugacijim semama nad k
 
 **Treca verzija** baze ima identicnu strukturu kao i druga, ali su dodati indeksi kako $sort i $match metode ne bi morale da prolaze kroz svih 20,000+ dokumenata
 
+![Plot](https://github.com/VeljkoMaksimovic/SBP_MongoDB_Projekat/v1_and_v2.png)
