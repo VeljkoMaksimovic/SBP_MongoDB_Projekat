@@ -70,6 +70,8 @@ for season in seasons:
 
     season_collection.insert_many(all_player_jsons)
     season_collection.create_index([('gw', 1), ('value', -1)])
+    season_collection.create_index([('minutes', -1)])
+    season_collection.create_index([('position', 1)])
     # We have to delete the list because pymongo uses object_id as document_id in its database, so inserting the
     # same list more than once will cause BulkWriteError
     # del all_player_jsons
