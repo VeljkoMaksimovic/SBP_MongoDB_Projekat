@@ -23,11 +23,10 @@ for season in seasons:
     data = pd.read_csv(data_dir + season + '/players_raw.csv', usecols=['element_type', 'first_name', 'second_name'])
     for _, row in data.iterrows():
         player_to_position_dict[row['first_name'] + ' ' + row['second_name']] = row['element_type']
-    # Going through each player in 'players' subfolder and and creating a object that represents their performance for
+    # Going through each player in 'players' subfolder and creating a object that represents their performance for
     # each gameweek
     players_dir = data_dir + season + '/players/'
     player_subfolders = os.listdir(players_dir)
-    test = 5
     for player in player_subfolders:
         player_data = pd.read_csv(players_dir + player + '/gw.csv',
                                   usecols=['assists',  'goals_conceded', 'goals_scored', 'ict_index', 'creativity',

@@ -77,7 +77,7 @@ db['2017-18'].aggregate(
 ).pretty()
 
 4.1 Za svako kolo prosek poena domacih i gostujucih igraca 
-db['2016-17'].aggregate(
+db['2016-17'].explain("executionStats").aggregate(
 	[
 	{$match : {'minutes' : 90}},
 	{$group : {
@@ -110,7 +110,7 @@ db['2016-17'].aggregate(
 ).pretty()
 
 5. U kom kolu je prosecna cena igraca najveca? U obzir uzimamo 400 najskupljih igraca svakog kola. Interesuje nas da li prosecna cena igraca raste kako sezona odmice (obratiti paznju na kola sa manje ili vise utakmica)
-db['2017-18'].aggregate(
+db['2017-18'].explain("executionStats").aggregate(
 	[
 	{$sort : {gw : 1,'value' : -1}},
 	{$group : {
@@ -129,7 +129,7 @@ db['2017-18'].aggregate(
 ).pretty()
 
 6.Koliko cestro se desi da najbolja postava kola (4-4-2) i po jedna izmena za svaku poziciju bude ukupno vredna manje od 100 miliona, koliko svaki igrac ima na raspoladanju da sastavi svoj tim?
-db['2016-17'].aggregate(
+db['2016-17'].explain("executionStats").aggregate(
 	[{$sort : {gw : 1, 'total_points' : -1}},
 	{$group : {
 			"_id" : {"gw" : "$gw",
@@ -191,7 +191,7 @@ db['2018-19'].aggregate(
 )
 
 8. Koliko golova u proseku postize najskuplji napadac po mecu. (Za svako kolo pogledati ko je najskuplji napadac i koliko je golova postigao)
-db['2016-17'].aggregate(
+db['2016-17'].explain("executionStats").aggregate(
 	[
 	{$match : {'position' : 4}},
 	{$sort : {gw : 1, 'value' : -1}},
@@ -209,7 +209,7 @@ db['2016-17'].aggregate(
 ).pretty()
 
 9. Koliko cesto se desava da golman primi gol na utakmici, a i dalje bude najbolji golman u kolu)
-db['2017-18'].aggregate(
+db['2017-18'].explain("executionStats").aggregate(
 	[
 	{$match : {'position' : 1}},
 	{$sort : {gw : 1, 'total_points' : -1}},
