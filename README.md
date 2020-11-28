@@ -12,16 +12,18 @@ U sklopu projekta je napravljeno vise razlicitih baza sa drugacijim semama nad k
 
 **Treca verzija** baze ima identicnu strukturu kao i druga, te koristi i iste upite, ali su dodati indeksi kako $sort i $match metode ne bi morale da prolaze kroz svih 20,000+ dokumenata. **7.78 GB**
 
-Performanse su merene koristeci .explain("executionStats") metodu MongoDB-a.
+Performanse su merene koristeci .explain("executionStats") metodu MongoDB-a. Meri se vreme izvrsavanja koje zavisi od svih ostalih procesa koji se izvrsavaju na racunaru, tako da **nije potpuno objektvino, vec sluzi da otprilike vidimo razliku** izmedju razlicitih verzija "iste" baze.
 
-**v3 se ne nalazi na grafu jer za sada ne primecujem razlike u izvrsavanju izmedju v2 i v3. Kada pokusam da optimizujem malo vise query-e sa indexima, i ako bude razlika, plotovacu i v3**
-![Plot](https://github.com/VeljkoMaksimovic/SBP_MongoDB_Projekat/blob/master/v1_and_v2.png)
+![Plot](https://github.com/VeljkoMaksimovic/SBP_MongoDB_Projekat/blob/master/v1_and_v2_and_v3.png)
+
+Razlika u broju dokumenata kroz koji prolazi Mongo pri izvrsavanju upitao bez indeksa i sa indeksom.
+
+![Plot](https://github.com/VeljkoMaksimovic/SBP_MongoDB_Projekat/blob/master/v2_and_v3.png)
+
+Vidimo da se kod upita koji pocinju sa $match drasticno smanjuje broj dokumenata kroz koje treba proci. Iako se u upitima koji pocinju sa $sort ne vidi razlika u broj dokumenata, jer moramo da prodjemo kroz svaki dokument u oba slucaja, i tu se koristi index kako bi ubrzao upite, jer su dokumenti vec sortirani po *game week-u*, zahvaljujuci njegovom indexu.
 
 ### TO-DO
-- Pokusati re-organizovati komande unutar aggregation pipeline-a kako bi se ubrzalo izvrsavanje
 - U par query-a radim $push i odma zatim $unwind. Treba pokusati to na neki nacin zaobici, verovatno ima efikasniji nacin da se to uradi.
 
 ### Pitanja
-- Posto vreme izvrsavanja istih upita na mongoDB serveru (*executionTimeMillis*) varira, da li ima bolji pristup merenja "brzine"?
-- Procitao sam da indexi pomazu pri aggregate upitima jedino ako se na pocetku pipeline-a nalaze $match ili $sort metode?? Zasto ne bi mogli da se koriste i ako sort i match imamo kasnije u pipeine-u??
 - Upit 8 ima $match metodu i odma zatim $sort. Postoje indexi i za polje *position*, po kom se radi $match, i za kombinaciju polja *gw* i *value*, po kojima se radi sort. Nakon izvrsavanja upita sam primetio da mongoDB koristi samo index za *gw* i *value*, a da ne koristi index za *match*, zasto?? Kada izbacim $sort iz pipeline-a, tek onda pocne da koristi index nad poljem *position* za match. Pored toga, vidim da radi sortiranje nad svih 23000+ dokumenata, iako se $sort nalazi nakon $match-a koji treba da smanji broj dokumenata na ~3000! Znam da Mongo aggregation optimizer menja redosled metoda unutar pipeline-a radi optimizacije, ali zasto bi prebacio sort pre match-a, zar nije bolje da se prvo smanji broj dokumenata pa da tek onda sortira?
