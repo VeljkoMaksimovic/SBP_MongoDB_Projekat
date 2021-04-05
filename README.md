@@ -30,12 +30,15 @@ Vidimo da se kod upita koji pocinju sa $match drasticno smanjuje broj dokumenata
 
 ### Odgovori
 - Index-i mogu da se koriste samo na prvom koraku *aggregation pipeline-a*. Nakon izvrsavanja te prve operacije pravi se privremeni interni data-set koji se prosledjuje sledecoj operaciji unutar pipeline-a. Posto taj interni data-set nije isti kao pocetni data-set nad kojim se izvrsava operacija, index-i kreirani nad pocetnim skupom podataka ne vaze/ne postoje u okviru internih skupova podataka koji se kreiraju nakon svake operacije unutar aggregation pipeline-a. To je razlog zasto se indexi mogu primenjivati samo na jednu (prvu) operaciju u sklopu agregacije.
-
 -Zasto se radi sortiranje nad svih 23000 dokumenata, a ne samo nad 3000 koji prodju kroz $match oepraciju, koja prethodi sortu? Mongo, kao i vecina drugin SUBP-ova ima svoj "query optimizer" koji reorganizuje redosled kojim se operacije unutar agregacije izvrsavaju. Optimizer je postavio sort operaciju na prvo mesto, pre match-a, te zbog toga sort prodje kroz svih 23000 dokumenata.
 
+
 Komande za rad sa mongoDB klijentom u terminalu: https://geekflare.com/mongodb-queries-examples/
+
 Optimizacija agregacionih upita/indexi: 
       - https://medium.com/@abhidas/improving-the-performance-of-mongodb-aggregation-d223a2b19f11
       - https://docs.mongodb.com/manual/indexes/
       - https://docs.mongodb.com/manual/applications/indexes/
+      
+      
 Spisak operacija koje se mogu koristiti unutar agregacije: https://docs.mongodb.com/manual/reference/operator/aggregation-pipeline/
